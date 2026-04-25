@@ -41,7 +41,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ===== SUPABASE CLIENT =====
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+supabase: Client = create_client(https://supabase.com/dashboard/project/vigwbdgmsefputrqlrvt, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3diZGdtc2VmcHV0cnFscnZ0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzEyNjY2MywiZXhwIjoyMDkyNzAyNjYzfQ.Z30Bbvh-_bkD7C97etyUsqlSg2YtKO7EeRNMVQMqFl0)
 
 # ===== FASTAPI APP =====
 app = FastAPI(title="Dragon Empire API", version="1.0.0")
