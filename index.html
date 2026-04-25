@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dragon Empire ⚔️</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #FFD700; --gold-dark: #B8860B;
+    --crimson: #8B0000; --crimson-light: #DC143C;
+    --dark: #0A0608; --dark2: #120D10; --dark3: #1E1520;
+    --purple: #4A0E6B; --purple-light: #7B2FBE;
+    --text: #E8D5B0; --text-dim: #8A7560;
+    --green: #2ECC71; --blue: #3498DB;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--dark); color:var(--text); font-family:'Crimson Text',serif; min-height:100vh; overflow-x:hidden; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background: radial-gradient(ellipse at 20% 20%, rgba(74,14,107,0.3) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(139,0,0,0.2) 0%, transparent 50%);
+    pointer-events:none; z-index:0;
+  }
+
+  /* LOADING SCREEN */
+  #loading-screen {
+    position:fixed; inset:0; z-index:1000;
+    background: radial-gradient(ellipse at center, #12091a 0%, #050305 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+    transition: opacity 0.5s;
+  }
+  #loading-screen.hidden { opacity:0; pointer-events:none; }
+  .loading-dragon { font-size:64px; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  .loading-title { font-family:'Cinzel',serif; font-size:24px; color:var(--gold); font-weight:900; }
+  .loading-bar-wrap { width:200px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+  .loading-bar-fill { height:100%; background:var(--gold); border-radius:2px; animation: loadprogress 2s ease forwards; }
+  @keyframes loadprogress { 0%{width:0%} 100%{width:100%} }
+  .loading-text { font-size:13px; color:var(--text-dim); font-family:'Cinzel',serif; }
+
+  /* HEADER */
+  .header {
+    position:sticky; top:0; z-index:100;
+    background:linear-gradient(180deg,rgba(10,6,8,0.98),rgba(10,6,8,0.85));
+    border-bottom:1px solid rgba(255,215,0,0.2);
+    backdrop-filter:blur(10px);
+    padding:10px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .header-logo { font-family:'Cinzel',serif; font-size:18px; font-weight:900; background:linear-gradient(135deg,#FFD700,#FF6B35,#FFD700); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .header-stats { display:flex; gap:10px; align-items:center; }
+  .stat-pill { display:flex; align-items:center; gap:4px; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.2); border-radius:20px; padding:4px 10px; font-size:13px; }
+  .stat-pill span { color:var(--gold); font-family:'Cinzel',serif; }
+
+  /* HERO CARD */
+  .hero-card { margin:8px 12px; background:linear-gradient(135deg,var(--dark2),var(--dark3)); border:1px solid rgba(255,215,0,0.25); border-radius:16px; padding:20px; position:relative; overflow:hidden; }
+  .hero-top { display:flex; gap:16px; align-items:flex-start; }
+  .hero-avatar { width:72px; height:72px; border-radius:50%; border:3px solid var(--gold); background:linear-gradient(135deg,var(--purple),var(--crimson)); display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; box-shadow:0 0 20px rgba(255,215,0,0.3); position:relative; }
+  .hero-avatar .level-badge { position:absolute; bottom:-4px; right:-4px; background:var(--gold); color:var(--dark); font-size:10px; font-weight:900; font-family:'Cinzel',serif; padding:2px 5px; border-radius:10px; }
+  .hero-info { flex:1; }
+  .hero-name { font-family:'Cinzel',serif; font-size:18px; font-weight:700; color:var(--gold); margin-bottom:4px; }
+  .hero-class { font-size:12px; color:var(--text-dim); margin-bottom:10px; font-style:italic; }
+  .progress-wrap { margin-bottom:6px; }
+  .progress-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-bottom:3px; }
+  .progress-bar { height:8px; background:rgba(255,255,255,0.05); border-radius:10px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:10px; transition:width 0.5s ease; }
+  .fill-hp { background:linear-gradient(90deg,#8B0000,#DC143C); }
+  .fill-xp { background:linear-gradient(90deg,#1a5276,#3498DB); }
+  .fill-mana { background:linear-gradient(90deg,#4A0E6B,#9B59B6); }
+
+  /* STATS ROW */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:8px 12px; }
+  .stat-box { background:rgba(255,255,255,0.03); border:1px solid rgba(255,215,0,0.12); border-radius:10px; padding:10px 6px; text-align:center; }
+  .stat-box .s-icon { font-size:20px; margin-bottom:4px; }
+  .stat-box .s-val { font-family:'Cinzel',serif; font-size:16px; font-weight:700; color:var(--gold); }
+  .stat-box .s-name { font-size:10px; color:var(--text-dim); margin-top:2px; }
+
+  /* SECTION */
+  .section-title { font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:2px; padding:8px 16px 4px; display:flex; align-items:center; gap:8px; }
+  .section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,215,0,0.2),transparent); }
+
+  /* ACTIONS */
+  .actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 12px 8px; }
+  .action-btn { background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02)); border:1px solid rgba(255,215,0,0.2); border-radius:14px; padding:16px 12px; cursor:pointer; transition:all 0.2s; text-align:center; position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; }
+  .action-btn:active { transform:scale(0.97); }
+  .action-btn .a-icon { font-size:32px; display:block; margin-bottom:8px; }
+  .action-btn .a-name { font-family:'Cinzel',serif; font-size:14px; font-weight:700; color:var(--gold); display:block; margin-bottom:3px; }
+  .action-btn .a-desc { font-size:11px; color:var(--text-dim); }
+  .action-btn .a-energy { position:absolute; top:8px; right:8px; font-size:10px; color:var(--gold-dark); background:rgba(255,215,0,0.08); padding:2px 6px; border-radius:10px; }
+  .action-btn.full-width { grid-column:span 2; display:flex; align-items:center; gap:14px; text-align:left; padding:14px 16px; }
+  .action-btn.full-width .a-icon { font-size:28px; margin-bottom:0; flex-shrink:0; }
+
+  /* QUESTS */
+  .quest-list { margin:0 12px 8px; display:flex; flex-direction:column; gap:6px; }
+  .quest-item { background:rgba(255,255,255,0.03); border:1px solid rgba(255,215,0,0.12); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+  .quest-icon { font-size:22px; flex-shrink:0; }
+  .quest-info { flex:1; min-width:0; }
+  .quest-name { font-size:14px; font-weight:600; color:var(--text); }
+  .quest-desc { font-size:11px; color:var(--text-dim); margin-top:2px; }
+  .quest-reward { font-family:'Cinzel',serif; font-size:13px; color:var(--gold); font-weight:700; flex-shrink:0; }
+  .quest-progress { margin-top:6px; }
+
+  /* BATTLE */
+  .battle-arena { margin:12px; background:linear-gradient(135deg,#0d0208,#1a0510); border:1px solid rgba(220,20,60,0.3); border-radius:16px; padding:20px; position:relative; overflow:hidden; }
+  .enemy-emoji-big { font-size:64px; display:block; text-align:center; animation:float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .enemy-name { font-family:'Cinzel',serif; font-size:18px; color:var(--crimson-light); font-weight:700; text-align:center; }
+  .enemy-sub { font-size:12px; color:var(--text-dim); text-align:center; margin-top:2px; }
+  .vs-divider { text-align:center; font-family:'Cinzel',serif; font-size:20px; color:var(--gold); margin:10px 0; letter-spacing:4px; }
+  .battle-btn { width:100%; padding:16px; background:linear-gradient(135deg,#8B0000,#DC143C); border:none; border-radius:12px; color:white; font-family:'Cinzel',serif; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:1px; box-shadow:0 4px 20px rgba(220,20,60,0.4); transition:all 0.2s; }
+  .battle-btn:active { transform:scale(0.97); }
+  .battle-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* LEADERBOARD */
+  .leaderboard { margin:0 12px 8px; display:flex; flex-direction:column; gap:4px; }
+  .lb-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:10px; }
+  .lb-item.lb-me { background:rgba(255,215,0,0.06); border-color:rgba(255,215,0,0.25); }
+  .lb-rank { font-family:'Cinzel',serif; font-size:14px; font-weight:700; width:28px; text-align:center; }
+  .lb-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--crimson)); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .lb-name { flex:1; font-size:14px; color:var(--text); }
+  .lb-power { font-family:'Cinzel',serif; font-size:13px; color:var(--gold); }
+
+  /* SHOP */
+  .shop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 12px 8px; }
+  .shop-item { background:rgba(255,255,255,0.03); border:1px solid rgba(255,215,0,0.15); border-radius:12px; padding:14px 10px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; }
+  .shop-item:active { transform:scale(0.97); }
+  .shop-item.rare { border-color:rgba(147,112,219,0.4); }
+  .shop-item.epic { border-color:rgba(255,165,0,0.5); }
+  .shop-item .item-emoji { font-size:36px; display:block; margin-bottom:6px; }
+  .shop-item .item-name { font-family:'Cinzel',serif; font-size:12px; color:var(--text); font-weight:700; margin-bottom:4px; }
+  .shop-item .item-stats { font-size:10px; color:var(--text-dim); margin-bottom:8px; }
+  .shop-item .item-price { display:flex; align-items:center; justify-content:center; gap:4px; background:rgba(255,215,0,0.1); border:1px solid rgba(255,215,0,0.25); border-radius:20px; padding:4px 10px; font-family:'Cinzel',serif; font-size:13px; color:var(--gold); font-weight:700; }
+  .rare-badge { position:absolute; top:6px; right:6px; font-size:9px; padding:2px 6px; border-radius:10px; font-weight:700; text-transform:uppercase; }
+  .rare-badge.rare { background:rgba(147,112,219,0.3); color:#9B59B6; border:1px solid rgba(147,112,219,0.4); }
+  .rare-badge.epic { background:rgba(255,165,0,0.2); color:#FF9800; border:1px solid rgba(255,165,0,0.4); }
+
+  /* PROFILE */
+  .profile-header { margin:12px; background:linear-gradient(135deg,var(--dark2),var(--dark3)); border:1px solid rgba(255,215,0,0.25); border-radius:16px; padding:24px; text-align:center; }
+  .profile-avatar-big { font-size:64px; margin-bottom:8px; }
+  .profile-name { font-family:'Cinzel',serif; font-size:22px; color:var(--gold); font-weight:700; }
+  .profile-title { font-size:13px; color:var(--text-dim); font-style:italic; margin:4px 0 16px; }
+  .profile-badges { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .badge { background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.2); border-radius:20px; padding:4px 12px; font-size:11px; font-family:'Cinzel',serif; color:var(--text-dim); }
+  .referral-box { margin:12px; background:linear-gradient(135deg,rgba(46,204,113,0.1),rgba(46,204,113,0.05)); border:1px solid rgba(46,204,113,0.3); border-radius:14px; padding:16px; text-align:center; }
+  .referral-box h3 { font-family:'Cinzel',serif; font-size:16px; color:var(--green); margin-bottom:4px; }
+  .referral-box p { font-size:13px; color:var(--text-dim); margin-bottom:12px; }
+  .ref-btn { background:linear-gradient(135deg,#1a7a3c,#2ecc71); color:white; border:none; border-radius:10px; padding:12px 24px; font-family:'Cinzel',serif; font-size:14px; font-weight:700; cursor:pointer; width:100%; }
+  .ref-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px; }
+  .ref-stat { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; text-align:center; }
+  .ref-stat .rs-val { font-family:'Cinzel',serif; font-size:22px; color:var(--green); font-weight:700; }
+  .ref-stat .rs-label { font-size:11px; color:var(--text-dim); margin-top:2px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:rgba(10,6,8,0.97); border-top:1px solid rgba(255,215,0,0.15); backdrop-filter:blur(15px); display:flex; z-index:100; padding-bottom:env(safe-area-inset-bottom,8px); }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 4px 8px; cursor:pointer; transition:all 0.2s; -webkit-tap-highlight-color:transparent; position:relative; }
+  .nav-item.active::before { content:''; position:absolute; top:0; left:20%; right:20%; height:2px; background:var(--gold); border-radius:0 0 2px 2px; }
+  .nav-item .n-icon { font-size:22px; line-height:1; margin-bottom:3px; transition:transform 0.2s; }
+  .nav-item:active .n-icon { transform:scale(1.2); }
+  .nav-item .n-label { font-size:10px; color:var(--text-dim); font-family:'Cinzel',serif; }
+  .nav-item.active .n-label { color:var(--gold); }
+
+  /* SCREENS */
+  .screen { display:none; padding-bottom:80px; }
+  .screen.active { display:block; }
+
+  /* TOAST */
+  .toast { position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px); background:rgba(10,6,8,0.95); border:1px solid var(--gold); border-radius:12px; padding:12px 20px; font-family:'Cinzel',serif; font-size:14px; color:var(--gold); z-index:200; opacity:0; transition:all 0.3s; white-space:nowrap; backdrop-filter:blur(10px); }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* AD BANNER */
+  .ad-banner { margin:8px 12px; background:#1a1a2e; border:1px solid rgba(255,215,0,0.3); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .ad-label { font-size:9px; color:var(--gold-dark); border:1px solid var(--gold-dark); border-radius:3px; padding:1px 4px; text-transform:uppercase; letter-spacing:1px; flex-shrink:0; }
+  .ad-text { font-size:13px; color:var(--text); flex:1; }
+  .ad-cta { font-size:12px; color:var(--gold); font-weight:700; font-family:'Cinzel',serif; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="loading-dragon">🐉</div>
+  <div class="loading-title">Dragon Empire</div>
+  <div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div>
+  <div class="loading-text" id="loading-text">მონაცემების ჩატვირთვა...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<header class="header">
+  <div class="header-logo">⚔️ Dragon Empire</div>
+  <div class="header-stats">
+    <div class="stat-pill">💰 <span id="hdr-gold">0</span></div>
+    <div class="stat-pill">⚡ <span id="hdr-energy">0/20</span></div>
+  </div>
+</header>
+
+<!-- HOME SCREEN -->
+<div class="screen active" id="screen-home">
+  <div class="ad-banner" id="ad-home" onclick="adClick()">
+    <span class="ad-label">AD</span>
+    <span class="ad-text" id="ad-text-home">🎮 გახდი უძლიერესი - სცადე Pro Pack!</span>
+    <span class="ad-cta">▶</span>
+  </div>
+  <div class="hero-card">
+    <div class="hero-top">
+      <div class="hero-avatar">
+        🧙
+        <span class="level-badge" id="hero-level">1</span>
+      </div>
+      <div class="hero-info">
+        <div class="hero-name" id="hero-name">Hero</div>
+        <div class="hero-class" id="hero-class">⚡ Warrior</div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>❤️ HP</span><span id="hp-val">100/100</span></div>
+          <div class="progress-bar"><div class="progress-fill fill-hp" id="hp-bar" style="width:100%"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>⭐ XP</span><span id="xp-val">0/1000</span></div>
+          <div class="progress-bar"><div class="progress-fill fill-xp" id="xp-bar" style="width:0%"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span>🔮 Mana</span><span id="mana-val">50/50</span></div>
+          <div class="progress-bar"><div class="progress-fill fill-mana" id="mana-bar" style="width:100%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-box"><div class="s-icon">⚔️</div><div class="s-val" id="stat-atk">50</div><div class="s-name">Attack</div></div>
+    <div class="stat-box"><div class="s-icon">🛡️</div><div class="s-val" id="stat-def">30</div><div class="s-name">Defense</div></div>
+    <div class="stat-box"><div class="s-icon">⚡</div><div class="s-val" id="stat-spd">20</div><div class="s-name">Speed</div></div>
+    <div class="stat-box"><div class="s-icon">🎯</div><div class="s-val" id="stat-crit">5%</div><div class="s-name">Crit</div></div>
+  </div>
+  <div class="section-title">ქმედებები</div>
+  <div class="actions-grid">
+    <div class="action-btn" onclick="switchScreen('battle')"><span class="a-icon">⚔️</span><span class="a-name">ბრძოლა</span><span class="a-desc">მტრების დამარცხება</span><span class="a-energy">⚡-2</span></div>
+    <div class="action-btn" onclick="switchScreen('shop')"><span class="a-icon">🔱</span><span class="a-name">მაღაზია</span><span class="a-desc">იარაღი & ჯავშანი</span></div>
+    <div class="action-btn" onclick="switchScreen('leaderboard')"><span class="a-icon">🏆</span><span class="a-name">გილდია</span><span class="a-desc">გუნდური ბრძოლა</span></div>
+    <div class="action-btn full-width" onclick="copyReferral()"><span class="a-icon">👥</span><div class="a-info"><span class="a-name" style="display:block">მოიწვიე მეგობრები</span><span class="a-desc">+500💰 ყოველ referral-ზე</span></div><span style="color:var(--green);font-size:20px">→</span></div>
+  </div>
+  <div class="section-title">დღიური დავალებები</div>
+  <div class="quest-list" id="quest-list">
+    <div class="quest-item"><span class="quest-icon">⏳</span><div class="quest-info"><div class="quest-name">ჩატვირთვა...</div></div></div>
+  </div>
+</div>
+
+<!-- BATTLE SCREEN -->
+<div class="screen" id="screen-battle">
+  <div class="ad-banner" onclick="adClick()"><span class="ad-label">AD</span><span class="ad-text">🗡️ Power-Up Pack - 50% Discount!</span><span class="ad-cta">▶</span></div>
+  <div class="battle-arena">
+    <span class="enemy-emoji-big" id="enemy-emoji">🐉</span>
+    <div class="enemy-name" id="enemy-name">Shadow Dragon</div>
+    <div class="enemy-sub" id="enemy-sub">Level 15 Boss</div>
+    <div style="margin-top:12px;">
+      <div class="progress-label"><span>❤️ Enemy HP</span><span id="enemy-hp-val">2000/2000</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-hp" id="enemy-hp-bar" style="width:100%"></div></div>
+    </div>
+    <div class="vs-divider">⚡ VS ⚡</div>
+    <div style="margin-bottom:12px;">
+      <div class="progress-label"><span>❤️ Your HP</span><span id="battle-my-hp">100/100</span></div>
+      <div class="progress-bar"><div class="progress-fill fill-hp" id="battle-my-bar" style="width:100%"></div></div>
+    </div>
+    <button class="battle-btn" id="battle-btn" onclick="doBattle()">⚔️ შეტევა!</button>
+  </div>
+  <div class="section-title">მტრები</div>
+  <div class="quest-list" id="enemy-list">
+    <div class="quest-item"><span class="quest-icon">⏳</span><div class="quest-info"><div class="quest-name">ჩატვირთვა...</div></div></div>
+  </div>
+</div>
+
+<!-- SHOP SCREEN -->
+<div class="screen" id="screen-shop">
+  <div class="ad-banner" onclick="adClick()"><span class="ad-label">AD</span><span class="ad-text">🎁 VIP Pack - 1000 Gems + Rare Sword!</span><span class="ad-cta">▶</span></div>
+  <div class="section-title">იარაღი & ჯავშანი</div>
+  <div class="shop-grid" id="shop-grid">
+    <div class="shop-item"><span class="item-emoji">⏳</span><div class="item-name">ჩატვირთვა...</div></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD SCREEN -->
+<div class="screen" id="screen-leaderboard">
+  <div class="section-title">Global Top</div>
+  <div class="leaderboard" id="leaderboard-list">
+    <div class="lb-item"><div class="lb-rank">⏳</div><div class="lb-name">ჩატვირთვა...</div></div>
+  </div>
+</div>
+
+<!-- PROFILE SCREEN -->
+<div class="screen" id="screen-profile">
+  <div class="profile-header">
+    <div class="profile-avatar-big">🧙</div>
+    <div class="profile-name" id="profile-name">Hero</div>
+    <div class="profile-title" id="profile-title">Level 1 Warrior</div>
+    <div class="profile-badges">
+      <span class="badge" id="profile-battles">⚔️ 0 Battles</span>
+      <span class="badge" id="profile-guild">🏰 No Guild</span>
+    </div>
+  </div>
+  <div class="section-title">მეგობრების მოწვევა</div>
+  <div class="referral-box">
+    <div class="ref-icon">🎁</div>
+    <h3>მოიწვიე & მიიღე!</h3>
+    <p>ყოველი მოწვეული მეგობრისთვის მიიღებ <strong style="color:var(--gold)">500💰</strong> და <strong style="color:var(--gold)">20💎</strong></p>
+    <button class="ref-btn" onclick="copyReferral()">📤 ლინკის კოპირება</button>
+  </div>
+  <div class="ref-stats">
+    <div class="ref-stat"><div class="rs-val" id="ref-count">0</div><div class="rs-label">მოწვეული მეგობარი</div></div>
+    <div class="ref-stat"><div class="rs-val" id="ref-earnings">0💰</div><div class="rs-label">Referral-ით მოგებული</div></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="switchScreen('home')"><span class="n-icon">🏠</span><span class="n-label">მთავარი</span></div>
+  <div class="nav-item" id="nav-battle" onclick="switchScreen('battle')"><span class="n-icon">⚔️</span><span class="n-label">ბრძოლა</span></div>
+  <div class="nav-item" id="nav-shop" onclick="switchScreen('shop')"><span class="n-icon">🔱</span><span class="n-label">მაღაზია</span></div>
+  <div class="nav-item" id="nav-leaderboard" onclick="switchScreen('leaderboard')"><span class="n-icon">🏆</span><span class="n-label">ტოპი</span></div>
+  <div class="nav-item" id="nav-profile" onclick="switchScreen('profile')"><span class="n-icon">🧙</span><span class="n-label">პროფილი</span></div>
+</nav>
+
+<script>
+// ============================================================
+// CONFIG — Replace with your actual backend URL
+// ============================================================
+const API_BASE = "https://your-backend.railway.app"; // ← შეცვალე!
+const tg = window.Telegram?.WebApp;
+const initData = tg?.initData || "";
+const tgUser = tg?.initDataUnsafe?.user || {};
+
+// ============================================================
+// STATE
+// ============================================================
+let player = null;
+let enemies = [];
+let shopItems = [];
+let currentEnemy = null;
+let currentEnemyHp = 0;
+let currentEnemyMaxHp = 0;
+let isBattling = false;
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  tg?.ready();
+  tg?.expand();
+
+  // Check referral in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const refBy = urlParams.get("ref");
+
+  document.getElementById("loading-text").textContent = "მოთამაშის ჩატვირთვა...";
+
+  try {
+    const res = await fetch(`${API_BASE}/api/init`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ init_data: initData, referred_by: refBy ? parseInt(refBy) : null }),
+    });
+
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+    player = data.player;
+
+    renderPlayer(player);
+    renderQuests(data.quests);
+
+    // Load enemies & shop in parallel
+    document.getElementById("loading-text").textContent = "სამყაროს ჩატვირთვა...";
+    const [enemiesData, shopData, lbData] = await Promise.all([
+      fetch(`${API_BASE}/api/enemies`).then(r=>r.json()),
+      fetch(`${API_BASE}/api/shop`).then(r=>r.json()),
+      fetch(`${API_BASE}/api/leaderboard`).then(r=>r.json()),
+    ]);
+
+    enemies = enemiesData.enemies;
+    shopItems = shopData.items;
+    renderEnemies(enemies);
+    renderShop(shopItems);
+    renderLeaderboard(lbData.leaderboard);
+
+    // Done
+    setTimeout(() => {
+      document.getElementById("loading-screen").classList.add("hidden");
+    }, 500);
+
+  } catch (err) {
+    // Fallback to demo mode (for testing outside Telegram)
+    console.warn("API not available, using demo data:", err);
+    loadDemoData();
+    setTimeout(() => {
+      document.getElementById("loading-screen").classList.add("hidden");
+    }, 1500);
+  }
+
+  // Ad rotation
+  setInterval(rotateAds, 8000);
+}
+
+// ============================================================
+// DEMO DATA (for testing without backend)
+// ============================================================
+function loadDemoData() {
+  player = { telegram_id: 0, hero_name: "Demo Hero", level: 5, xp: 3000, xp_next: 5000, hp: 400, hp_max: 500, mana: 80, mana_max: 100, gold: 1250, gems: 30, energy: 18, energy_max: 20, attack: 120, defense: 80, speed: 50, crit_chance: 10, battles_won: 12, battles_total: 20, referral_count: 3, referral_earnings: 1500 };
+  enemies = [
+    { id:1, emoji:"🐉", name:"Shadow Dragon", level:15, hp_max:2000, reward_gold:500, reward_xp:400, is_boss:true },
+    { id:2, emoji:"👹", name:"Dark Orc", level:10, hp_max:800, reward_gold:120, reward_xp:100 },
+    { id:3, emoji:"🧟", name:"Zombie King", level:8, hp_max:600, reward_gold:80, reward_xp:70 },
+    { id:4, emoji:"🕷️", name:"Poison Spider", level:5, hp_max:300, reward_gold:40, reward_xp:30 },
+  ];
+  shopItems = [
+    { id:1, emoji:"🗡️", name:"Steel Sword", type:"weapon", rarity:"common", atk_bonus:45, def_bonus:0, price_gold:300, item_stats:"+45 ATK" },
+    { id:2, emoji:"🔱", name:"Trident of Doom", type:"weapon", rarity:"rare", atk_bonus:120, def_bonus:0, price_gold:800 },
+    { id:3, emoji:"🛡️", name:"Iron Shield", type:"armor", rarity:"common", atk_bonus:0, def_bonus:60, price_gold:200 },
+    { id:4, emoji:"👑", name:"Dragon Crown", type:"armor", rarity:"epic", atk_bonus:50, def_bonus:80, price_gold:1500 },
+    { id:5, emoji:"❤️", name:"HP Potion", type:"potion", rarity:"common", price_gold:50 },
+    { id:6, emoji:"🔮", name:"Mana Crystal", type:"potion", rarity:"common", price_gold:80 },
+  ];
+  const demoQuests = [
+    { quests:{ emoji:"⚔️", name:"5 მტრის დამარცხება", type:"battles", target_count:5, reward_gold:300, reward_xp:200 }, progress:3, completed:false },
+    { quests:{ emoji:"🏰", name:"Dungeon-ის გავლა", type:"dungeon", target_count:1, reward_gold:0, reward_xp:150 }, progress:0, completed:false },
+    { quests:{ emoji:"👥", name:"გილდიაში შეხვედრა", type:"guild", target_count:1, reward_gold:100, reward_xp:50 }, progress:1, completed:true },
+  ];
+  const demoLb = [
+    { hero_name:"LightningKing", power:48200, rank:1 },
+    { hero_name:"FireMaster99", power:45100, rank:2 },
+    { hero_name:"DarkShadow", power:42800, rank:3 },
+    { hero_name:"ArrowQueen", power:38500, rank:4 },
+    { hero_name:"IceLord", power:35200, rank:5 },
+  ];
+  renderPlayer(player);
+  renderQuests(demoQuests);
+  renderEnemies(enemies);
+  renderShop(shopItems);
+  renderLeaderboard(demoLb);
+  if (enemies[0]) selectEnemy(enemies[0]);
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function renderPlayer(p) {
+  document.getElementById("hero-name").textContent = p.hero_name;
+  document.getElementById("hero-level").textContent = p.level;
+  document.getElementById("hdr-gold").textContent = p.gold.toLocaleString();
+  document.getElementById("hdr-energy").textContent = `${p.energy}/${p.energy_max}`;
+
+  document.getElementById("hp-val").textContent = `${p.hp}/${p.hp_max}`;
+  document.getElementById("hp-bar").style.width = `${(p.hp/p.hp_max)*100}%`;
+  document.getElementById("xp-val").textContent = `${p.xp.toLocaleString()}/${p.xp_next.toLocaleString()}`;
+  document.getElementById("xp-bar").style.width = `${Math.min(100,(p.xp/p.xp_next)*100)}%`;
+  document.getElementById("mana-val").textContent = `${p.mana}/${p.mana_max}`;
+  document.getElementById("mana-bar").style.width = `${(p.mana/p.mana_max)*100}%`;
+
+  document.getElementById("stat-atk").textContent = p.attack;
+  document.getElementById("stat-def").textContent = p.defense;
+  document.getElementById("stat-spd").textContent = p.speed;
+  document.getElementById("stat-crit").textContent = `${p.crit_chance}%`;
+
+  document.getElementById("battle-my-hp").textContent = `${p.hp}/${p.hp_max}`;
+  document.getElementById("battle-my-bar").style.width = `${(p.hp/p.hp_max)*100}%`;
+
+  document.getElementById("profile-name").textContent = p.hero_name;
+  document.getElementById("profile-title").textContent = `Level ${p.level} Warrior`;
+  document.getElementById("profile-battles").textContent = `⚔️ ${p.battles_won} Battles`;
+  document.getElementById("ref-count").textContent = p.referral_count;
+  document.getElementById("ref-earnings").textContent = `${p.referral_earnings}💰`;
+}
+
+function renderQuests(quests) {
+  const container = document.getElementById("quest-list");
+  if (!quests || !quests.length) { container.innerHTML = '<div class="quest-item"><div class="quest-info"><div class="quest-name">დღიური დავალებები არ არის</div></div></div>'; return; }
+
+  container.innerHTML = quests.map(pq => {
+    const q = pq.quests;
+    const progress = pq.progress;
+    const target = q.target_count;
+    const pct = Math.min(100, (progress/target)*100);
+    const done = pq.completed;
+    return `
+      <div class="quest-item" style="${done?'opacity:0.6':''}">
+        <span class="quest-icon">${q.emoji}</span>
+        <div class="quest-info">
+          <div class="quest-name">${q.name}</div>
+          <div class="quest-progress"><div class="progress-bar" style="height:4px"><div class="progress-fill fill-${done?'mana':'hp'}" style="width:${pct}%"></div></div></div>
+          <div class="quest-desc">${done?'✅ დასრულებულია!':progress+'/'+target+' დასრულებულია'}</div>
+        </div>
+        <div class="quest-reward">${q.reward_gold?'💰 '+q.reward_gold:''} ${q.reward_xp?'⭐ '+q.reward_xp:''}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderEnemies(enemyList) {
+  const container = document.getElementById("enemy-list");
+  container.innerHTML = enemyList.map(e => `
+    <div class="quest-item" onclick='selectEnemy(${JSON.stringify(e)})' style="cursor:pointer">
+      <span class="quest-icon">${e.emoji}</span>
+      <div class="quest-info">
+        <div class="quest-name">${e.name}</div>
+        <div class="quest-desc">${e.is_boss?'Boss • ':''} Level ${e.level} • ${e.hp_max.toLocaleString()} HP</div>
+      </div>
+      <div class="quest-reward">💰 ${e.reward_gold}</div>
+    </div>
+  `).join("");
+  if (enemyList.length) selectEnemy(enemyList[0]);
+}
+
+function selectEnemy(e) {
+  currentEnemy = e;
+  currentEnemyMaxHp = e.hp_max;
+  currentEnemyHp = e.hp_max;
+  document.getElementById("enemy-emoji").textContent = e.emoji;
+  document.getElementById("enemy-name").textContent = e.name;
+  document.getElementById("enemy-sub").textContent = `${e.is_boss?'Boss • ':''}Level ${e.level}`;
+  document.getElementById("enemy-hp-val").textContent = `${e.hp_max}/${e.hp_max}`;
+  document.getElementById("enemy-hp-bar").style.width = "100%";
+  document.getElementById("battle-btn").textContent = "⚔️ შეტევა!";
+  document.getElementById("battle-btn").disabled = false;
+  showToast(`🎯 ${e.name} არჩეულია!`);
+}
+
+function renderShop(items) {
+  const container = document.getElementById("shop-grid");
+  container.innerHTML = items.map(item => {
+    const rarityClass = item.rarity !== "common" ? item.rarity : "";
+    const badge = item.rarity !== "common" ? `<span class="rare-badge ${item.rarity}">${item.rarity.toUpperCase()}</span>` : "";
+    const stats = [
+      item.atk_bonus ? `+${item.atk_bonus} ATK` : "",
+      item.def_bonus ? `+${item.def_bonus} DEF` : "",
+      item.hp_bonus ? `+${item.hp_bonus} HP` : "",
+    ].filter(Boolean).join(" • ") || item.type;
+    const price = item.price_stars ? `⭐ ${item.price_stars}` : `💰 ${item.price_gold}`;
+    return `
+      <div class="shop-item ${rarityClass}" onclick="buyItem(${item.id},'${item.name}',${item.price_gold})">
+        ${badge}
+        <span class="item-emoji">${item.emoji}</span>
+        <div class="item-name">${item.name}</div>
+        <div class="item-stats">${stats}</div>
+        <div class="item-price">${price}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderLeaderboard(lb) {
+  const medals = ["🥇","🥈","🥉","4","5","6","7","8","9","10"];
+  const myTgId = player?.telegram_id;
+  const container = document.getElementById("leaderboard-list");
+  container.innerHTML = lb.map((row, i) => {
+    const isMe = row.telegram_id === myTgId;
+    return `
+      <div class="lb-item ${isMe?'lb-me':''}">
+        <div class="lb-rank" style="color:${i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'var(--text-dim)'}">${medals[i]||i+1}</div>
+        <div class="lb-avatar">⚔️</div>
+        <div class="lb-name">${row.hero_name}${isMe?' (შენ)':''}</div>
+        <div class="lb-power">⚔️ ${row.power?.toLocaleString()}</div>
+      </div>`;
+  }).join("");
+}
+
+// ============================================================
+// BATTLE
+// ============================================================
+async function doBattle() {
+  if (isBattling || !currentEnemy) return;
+  if (!player) return;
+  if (player.energy < 2) { showToast("⚡ ენერგია ამოიწურა!"); return; }
+
+  isBattling = true;
+  const btn = document.getElementById("battle-btn");
+  btn.disabled = true;
+  btn.textContent = "⚔️ ბრძოლა...";
+
+  try {
+    // Call backend
+    const res = await fetch(`${API_BASE}/api/battle`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ init_data: initData, enemy_id: currentEnemy.id }),
+    });
+
+    let result;
+    if (res.ok) {
+      result = await res.json();
+    } else {
+      // Demo mode battle calculation
+      const atk = player.attack;
+      const hitsToKill = Math.ceil(currentEnemy.hp_max / atk);
+      result = {
+        won: hitsToKill <= 4,
+        damage_dealt: Math.min(atk * 4, currentEnemy.hp_max),
+        gold_earned: hitsToKill <= 4 ? currentEnemy.reward_gold : 0,
+        xp_earned: hitsToKill <= 4 ? currentEnemy.reward_xp : 0,
+        crit: Math.random() < 0.1,
+      };
+    }
+
+    // Animate HP drop
+    const dmgPerStep = result.damage_dealt / 4;
+    let step = 0;
+    currentEnemyHp = currentEnemy.hp_max;
+    const interval = setInterval(() => {
+      step++;
+      currentEnemyHp = Math.max(0, currentEnemyHp - dmgPerStep);
+      const pct = (currentEnemyHp / currentEnemy.hp_max) * 100;
+      document.getElementById("enemy-hp-bar").style.width = pct + "%";
+      document.getElementById("enemy-hp-val").textContent = `${Math.round(currentEnemyHp)}/${currentEnemy.hp_max}`;
+      if (step >= 4) {
+        clearInterval(interval);
+        if (result.won) {
+          player.gold += result.gold_earned;
+          player.energy -= 2;
+          document.getElementById("hdr-gold").textContent = player.gold.toLocaleString();
+          document.getElementById("hdr-energy").textContent = `${player.energy}/${player.energy_max}`;
+          document.getElementById("enemy-emoji").textContent = "💀";
+          showToast(`🏆 გაიმარჯვე! +${result.gold_earned}💰 +${result.xp_earned}⭐${result.crit?' 💥 CRIT!':''}`);
+          if (result.level_up) setTimeout(() => showToast("⬆️ Level Up!"), 1000);
+          btn.textContent = "✅ ისევ ბრძოლა?";
+          setTimeout(() => {
+            document.getElementById("enemy-emoji").textContent = currentEnemy.emoji;
+            currentEnemyHp = currentEnemy.hp_max;
+            document.getElementById("enemy-hp-bar").style.width = "100%";
+            document.getElementById("enemy-hp-val").textContent = `${currentEnemy.hp_max}/${currentEnemy.hp_max}`;
+            btn.textContent = "⚔️ შეტევა!";
+          }, 2000);
+        } else {
+          showToast("⚔️ ბრძოლა გრძელდება! გააძლიერე გმირი.");
+          btn.textContent = "⚔️ ისევ ცადე!";
+        }
+        btn.disabled = false;
+        isBattling = false;
+      }
+    }, 400);
+
+  } catch (err) {
+    console.error(err);
+    showToast("❌ შეცდომა. სცადე ისევ.");
+    btn.disabled = false;
+    btn.textContent = "⚔️ შეტევა!";
+    isBattling = false;
+  }
+}
+
+// ============================================================
+// SHOP BUY
+// ============================================================
+async function buyItem(itemId, itemName, price) {
+  if (!player) return;
+  if (player.gold < price) { showToast("❌ საკმარისი Gold არ გაქვს!"); return; }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/shop/buy`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ init_data: initData, item_id: itemId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      player.gold = data.new_gold;
+      if (data.stats.attack) player.attack = data.stats.attack;
+      if (data.stats.defense) player.defense = data.stats.defense;
+      renderPlayer(player);
+    } else {
+      // Demo mode
+      player.gold -= price;
+      renderPlayer(player);
+    }
+    showToast(`✅ ${itemName} იყიდა! -${price}💰`);
+  } catch {
+    player.gold -= price;
+    renderPlayer(player);
+    showToast(`✅ ${itemName} იყიდა! -${price}💰`);
+  }
+}
+
+// ============================================================
+// AD CLICK
+// ============================================================
+async function adClick() {
+  try {
+    await fetch(`${API_BASE}/api/ad/click`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ init_data: initData, ad_type: "banner" }),
+    });
+  } catch {}
+  if (player) { player.gold += 5; document.getElementById("hdr-gold").textContent = player.gold.toLocaleString(); }
+  showToast("📢 +5💰 bonus! Ad დაჭერისთვის მადლობა!");
+}
+
+// ============================================================
+// REFERRAL
+// ============================================================
+function copyReferral() {
+  if (!tgUser.id) { showToast("📱 Telegram-ში გახსენი!"); return; }
+  const botName = "your_bot_username"; // ← შეცვალე!
+  const link = `https://t.me/${botName}?start=ref_${tgUser.id}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => showToast("🔗 Referral ლინკი დაკოპირდა!"));
+  } else {
+    tg?.switchInlineQuery ? tg.switchInlineQuery(link) : showToast("🔗 " + link);
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function switchScreen(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById("screen-" + name).classList.add("active");
+  document.getElementById("nav-" + name).classList.add("active");
+  window.scrollTo(0, 0);
+
+  // Reload leaderboard on tab open
+  if (name === "leaderboard") refreshLeaderboard();
+}
+
+async function refreshLeaderboard() {
+  try {
+    const res = await fetch(`${API_BASE}/api/leaderboard`);
+    const data = await res.json();
+    renderLeaderboard(data.leaderboard);
+  } catch {}
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ============================================================
+// ADS ROTATION
+// ============================================================
+const adTexts = ["🎮 გახდი უძლიერესი - სცადე Pro Pack!","🗡️ Legendary Sword - მხოლოდ დღეს 70%!","💎 VIP Status - 2x XP & Gold სამუდამოდ!","🏆 Join Premium Guild - Top Rewards!"];
+let adIdx = 0;
+function rotateAds() {
+  adIdx = (adIdx + 1) % adTexts.length;
+  const el = document.getElementById("ad-text-home");
+  if (el) el.textContent = adTexts[adIdx];
+}
+
+// ============================================================
+// START
+// ============================================================
+init();
+</script>
+</body>
+</html>
