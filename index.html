@@ -694,7 +694,7 @@ async function adClick() {
 // ============================================================
 function copyReferral() {
   if (!tgUser.id) { showToast("📱 Telegram-ში გახსენი!"); return; }
-  const botName = "your_bot_username"; // ← შეცვალე!
+  const botName = "game_dragon_empire_bot"; // ← შეცვალე!
   const link = `https://t.me/${botName}?start=ref_${tgUser.id}`;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => showToast("🔗 Referral ლინკი დაკოპირდა!"));
